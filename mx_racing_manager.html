@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MX RACING MANAGER — Garage, Compteur Bluetooth & Entretien</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            mx: {
+              dark: '#0B0E14',
+              card: '#131822',
+              cardHover: '#19202D',
+              border: '#232B3A',
+              orange: '#FF5500',
+              orangeHover: '#FF6D24',
+              blue: '#0088FF',
+              blueGlow: '#00A3FF',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0B0E14;
+      color: #F1F5F9;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0E14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #232B3A;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #FF5500;
+    }
+    .pulse-ring {
+      animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      70% { transform: scale(1.25); opacity: 0; }
+      100% { transform: scale(1.25); opacity: 0; }
+    }
+    .racing-stripe {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 85, 0, 0.08),
+        rgba(255, 85, 0, 0.08) 10px,
+        transparent 10px,
+        transparent 20px
+      );
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-mx-orange selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 bg-[#0B0E14]/90 backdrop-blur-md border-b border-mx-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-mx-orange to-orange-700 flex items-center justify-center shadow-lg shadow-mx-orange/25 shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-black tracking-tight text-lg sm:text-xl text-white">MX RACING <span class="text-mx-orange">MANAGER</span></span>
+            <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-mx-blue/15 text-mx-blueGlow border border-mx-blue/30">PRO V2.5</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Garage (Max 3 Moto Test) • GPS 25Hz • Coach MX Fit</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Desktop) -->
+      <nav class="hidden md:flex items-center bg-mx-card p-1 rounded-xl border border-mx-border">
+        <button onclick="switchTab('garage')" id="nav-garage" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-mx-orange text-white shadow">Garage</button>
+        <button onclick="switchTab('chrono')" id="nav-chrono" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">Chrono & GPS</button>
+        <button onclick="switchTab('coach')" id="nav-coach" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">Coach MX Fit</button>
+        <button onclick="switchTab('mental')" id="nav-mental" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">Mental Pro</button>
+        <button onclick="switchTab('tutos')" id="nav-tutos" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">Tutos Méca</button>
+        <button onclick="switchTab('historique')" id="nav-historique" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">Historique</button>
+      </nav>
+
+      <!-- Actions & Premium Button -->
+      <div class="flex items-center gap-2">
+        <button onclick="openPremiumModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 transition active:scale-95">
+          <span>👑</span> Premium (2€/mois)
+        </button>
+        <button onclick="openBikeModal()" class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-mx-card hover:bg-mx-cardHover border border-mx-border text-xs font-semibold text-white transition active:scale-95">
+          <svg class="w-4 h-4 text-mx-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          <span>Moto</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom Subnav -->
+    <div class="flex md:hidden border-t border-mx-border bg-[#0E121A] px-1 py-1.5 gap-1 overflow-x-auto">
+      <button onclick="switchTab('garage')" id="mnav-garage" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold bg-mx-orange text-white whitespace-nowrap px-2">Garage</button>
+      <button onclick="switchTab('chrono')" id="mnav-chrono" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 whitespace-nowrap px-2">Chrono</button>
+      <button onclick="switchTab('coach')" id="mnav-coach" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 whitespace-nowrap px-2">Coach</button>
+      <button onclick="switchTab('mental')" id="mnav-mental" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 whitespace-nowrap px-2">Mental</button>
+      <button onclick="switchTab('tutos')" id="mnav-tutos" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 whitespace-nowrap px-2">Tutos</button>
+      <button onclick="switchTab('historique')" id="mnav-historique" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 whitespace-nowrap px-2">Historique</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ==================== TAB 1: GARAGE & ENTRETIEN ==================== -->
+    <div id="view-garage" class="space-y-6">
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-mx-orange"></span> Mon Garage (<span id="garage-count">0</span> / 3 max test)
+          </h2>
+        </div>
+        <div id="bike-cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Active Bike Info -->
+        <div class="lg:col-span-7 bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
+          <div>
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span id="active-bike-engine-badge" class="px-2.5 py-0.5 rounded-md text-xs font-extrabold uppercase bg-mx-blue/20 text-mx-blueGlow border border-mx-blue/30">2 TEMPS</span>
+                  <span id="active-bike-cc-badge" class="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-slate-800 text-slate-300">65 cc</span>
+                  <span id="active-bike-year-badge" class="text-xs font-mono text-slate-400">2026</span>
+                </div>
+                <h1 id="active-bike-name" class="text-2xl sm:text-3xl font-black text-white tracking-tight">Yamaha YZ 65</h1>
+                <p id="active-bike-notes" class="text-xs sm:text-sm text-slate-400 mt-1">Préparation course • Mélange 2.5% Motul 800</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openBikeModal()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">Ajouter</button>
+                <button onclick="deleteActiveBike()" class="p-2 rounded-xl bg-slate-800 hover:bg-red-950/70 text-slate-400 hover:text-red-400 border border-slate-700 transition" title="Supprimer cette moto">🗑️</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mt-6">
+              <div class="bg-[#0E121A] border border-mx-border rounded-xl p-3">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase">Compteur Total</div>
+                <div class="mt-1 flex items-baseline gap-1">
+                  <span id="active-bike-hours-big" class="text-2xl sm:text-3xl font-mono font-black text-white">18.4</span>
+                  <span class="text-xs font-bold text-mx-orange">hrs</span>
+                </div>
+              </div>
+              <div class="bg-[#0E121A] border border-mx-border rounded-xl p-3">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase">Alertes Urgentes</div>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <span id="kpi-urgent-count" class="text-2xl sm:text-3xl font-mono font-black text-red-500">0</span>
+                  <span class="text-xs text-slate-400">à faire</span>
+                </div>
+              </div>
+              <div class="bg-[#0E121A] border border-mx-border rounded-xl p-3">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase">À Prévoir</div>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <span id="kpi-warning-count" class="text-2xl sm:text-3xl font-mono font-black text-amber-400">0</span>
+                  <span class="text-xs text-slate-400">bientôt</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-mx-border flex flex-wrap items-center justify-between gap-3">
+            <div class="text-xs text-slate-400">Simulateur piste :</div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="addEngineHours(0.5)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono font-bold text-white border border-slate-700">+0.5h</button>
+              <button onclick="addEngineHours(1.0)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono font-bold text-white border border-slate-700">+1.0h</button>
+              <button onclick="toggleLiveRideSimulation()" id="btn-live-ride" class="px-3 py-1.5 rounded-lg bg-mx-orange/15 hover:bg-mx-orange/25 text-mx-orange border border-mx-orange/40 text-xs font-bold transition flex items-center gap-1.5">
+                <span id="live-ride-dot" class="w-2 h-2 rounded-full bg-mx-orange"></span>
+                <span id="live-ride-text">Mode Live</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bluetooth Hour Meter Module -->
+        <div class="lg:col-span-5 bg-gradient-to-b from-[#131B29] to-mx-card border border-mx-blue/30 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-lg">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="relative w-11 h-11 rounded-xl bg-mx-blue/15 border border-mx-blue/40 flex items-center justify-center text-mx-blueGlow">
+                <span id="bt-pulse" class="hidden absolute inset-0 rounded-xl bg-mx-blue/30 pulse-ring"></span>
+                <svg class="w-6 h-6 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="font-extrabold text-white text-base">Compteur Bluetooth</h2>
+                  <span id="bt-status-pill" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-400">Déconnecté</span>
+                </div>
+                <p id="bt-device-name" class="text-xs text-slate-400 mt-0.5 font-mono">MX-BLE-YZ65 #A42</p>
+              </div>
+            </div>
+            <div id="bt-battery-box" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0B0E14]/70 border border-mx-border text-xs font-mono text-emerald-400">
+              <span>⚡ 94%</span>
+            </div>
+          </div>
+
+          <div class="my-4 bg-[#0B0E14]/90 border border-mx-border rounded-xl p-4">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span>SYNCHRO BOÎTIER BLE</span>
+              <span id="bt-last-sync" class="font-mono text-[11px] text-slate-500">En attente</span>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <div class="font-mono text-3xl sm:text-4xl font-black tracking-tight text-mx-blueGlow" id="bt-readout-hours">--.- <span class="text-sm font-bold text-slate-500">HRS</span></div>
+              <div class="text-right">
+                <div class="text-[11px] text-slate-400">Régime Moteur</div>
+                <div id="bt-rpm-readout" class="font-mono text-sm font-bold text-slate-300">0 RPM</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2.5">
+            <button onclick="toggleBluetoothConnection()" id="btn-bt-connect" class="flex-1 py-2.5 px-4 rounded-xl bg-mx-blue hover:bg-mx-blueGlow text-white font-bold text-sm transition flex items-center justify-center gap-2">
+              <span id="btn-bt-connect-text">Connecter le boîtier Bluetooth</span>
+            </button>
+            <button onclick="syncBluetoothNow()" id="btn-bt-sync" disabled class="py-2.5 px-3.5 rounded-xl bg-slate-800 disabled:opacity-40 text-white font-semibold text-xs border border-slate-700">Sync</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Maintenance Schedule -->
+      <section class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+              Plan d'Entretien & Périodicités <span id="maint-engine-tag" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">2T</span>
+            </h2>
+            <p class="text-xs text-slate-400">Alertes automatiques liées au compteur d'heures Bluetooth.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="filter-maintenance" onchange="renderMaintenanceList()" class="bg-mx-card border border-mx-border text-xs font-semibold text-slate-200 rounded-xl px-3 py-2">
+              <option value="all">Tous les entretiens</option>
+              <option value="urgent">Urgents uniquement</option>
+            </select>
+            <button onclick="openAddMaintenanceModal()" class="px-3.5 py-2 rounded-xl bg-mx-orange hover:bg-mx-orangeHover text-white text-xs font-bold transition flex items-center gap-1.5 shrink-0">+ Entretien</button>
+          </div>
+        </div>
+        <div id="maintenance-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 2: CHRONO, PISTES & GPS ==================== -->
+    <div id="view-chrono" class="hidden space-y-6">
+      <section class="bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Chrono & GPS 25Hz</span>
+              <span id="chrono-active-bike-pill" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-mx-orange/15 text-mx-orange">Moto : Yamaha YZ 65</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Circuits, Chronos & Cartographie Télémétrie</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Enregistrez vos pistes, météo, type de terre et visualisez vos accélérations (vert) et freinages (rouge) en direct.</p>
+          </div>
+          <button onclick="openTrackModal()" class="px-4 py-2.5 rounded-xl bg-mx-orange hover:bg-mx-orangeHover text-white text-xs sm:text-sm font-bold transition flex items-center gap-2">+ Nouveau Circuit</button>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Terrains enregistrés (<span id="tracks-count">0</span>)</span>
+          </div>
+          <div id="tracks-selector-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        </div>
+
+        <div id="active-track-banner" class="bg-[#0B0E14] border border-mx-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"></div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Interactive Track Map -->
+        <div class="lg:col-span-7 bg-mx-card border border-cyan-500/30 rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-4 shadow-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-300">🗺️</div>
+              <div>
+                <h2 class="font-extrabold text-white text-base">Cartographie GPS & IMU</h2>
+                <p class="text-xs text-slate-400">Vert = Accélération (G+) | Rouge = Freinage (G-)</p>
+              </div>
+            </div>
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0B0E14] border border-mx-border text-xs font-semibold text-slate-300 cursor-pointer">
+              <input type="checkbox" id="toggle-compare-lap" onchange="drawTrackTelemetryCanvas()" class="accent-cyan-400 rounded" />
+              <span>Comparer vs Record</span>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between bg-[#0B0E14] px-3.5 py-2 rounded-xl border border-mx-border text-[11px] font-semibold">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5 text-emerald-400"><span class="w-3 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Accel</span>
+              <span class="flex items-center gap-1.5 text-red-400"><span class="w-3 h-1.5 rounded-full bg-red-500 inline-block"></span> Frein</span>
+              <span class="flex items-center gap-1.5 text-cyan-400"><span class="w-3 h-1.5 rounded-full bg-cyan-400 inline-block"></span> Courbe</span>
+            </div>
+            <span id="map-lap-label" class="font-mono text-slate-400">Tour : --</span>
+          </div>
+
+          <div class="relative w-full h-72 sm:h-80 bg-[#080B10] border border-mx-border rounded-2xl overflow-hidden">
+            <canvas id="track-telemetry-canvas" class="w-full h-full block"></canvas>
+            <div class="absolute top-3 left-3 bg-[#0B0E14]/90 border border-mx-border rounded-xl p-2.5 text-xs space-y-1 pointer-events-none">
+              <div class="text-[10px] font-bold uppercase text-slate-400">Télémétrie Curseur</div>
+              <div class="flex items-center gap-3 font-mono">
+                <div><span class="text-slate-500 text-[10px]">VITESSE</span><div id="hud-speed" class="text-sm font-black text-white">74 km/h</div></div>
+                <div><span class="text-slate-500 text-[10px]">G-FORCE</span><div id="hud-gforce" class="text-sm font-black text-emerald-400">+0.65 G</div></div>
+                <div><span class="text-slate-500 text-[10px]">ANGLE</span><div id="hud-lean" class="text-sm font-black text-cyan-300">28°</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-1">
+            <div class="flex items-center gap-3">
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">Scrubber :</span>
+              <input type="range" id="telemetry-scrubber" min="0" max="99" value="15" oninput="onScrubTelemetry(this.value)" class="w-full accent-cyan-400 cursor-pointer" />
+              <span id="telemetry-scrubber-pct" class="text-xs font-mono font-bold text-cyan-300 w-10 text-right">15%</span>
+            </div>
+            <div class="flex gap-2.5">
+              <button onclick="simulateTelemetryBoxLap()" id="btn-sim-gps-lap" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-mx-blue text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+                <span id="btn-sim-gps-text">Simuler un tour acquis par le boîtier GPS</span>
+              </button>
+              <select id="select-telemetry-lap" onchange="selectLapForTelemetry(this.value)" class="bg-[#0B0E14] border border-mx-border text-xs font-mono font-bold text-slate-200 rounded-xl px-3 py-2.5"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stopwatch & Laps -->
+        <div class="lg:col-span-5 bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-5">
+          <div>
+            <div class="flex items-center justify-between">
+              <h2 class="font-extrabold text-white text-base">⏱️ Chronomètre Piste</h2>
+              <span id="session-date-badge" class="text-xs font-mono text-slate-400">Session du jour</span>
+            </div>
+            <div class="mt-4 bg-[#0B0E14] border border-mx-border rounded-2xl p-5 text-center">
+              <div class="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1">Temps au tour en cours</div>
+              <div id="stopwatch-display" class="font-mono text-4xl sm:text-5xl font-black text-white">00:00.00</div>
+              <div class="mt-4 flex justify-center gap-2.5">
+                <button onclick="toggleStopwatch()" id="btn-sw-start" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">Démarrer</button>
+                <button onclick="recordStopwatchLap()" id="btn-sw-lap" disabled class="px-4 py-2 rounded-xl bg-mx-orange disabled:opacity-40 text-white text-xs font-bold">Tour</button>
+                <button onclick="resetStopwatch()" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold">RAZ</button>
+              </div>
+            </div>
+            <form onsubmit="addManualLap(event)" class="mt-3 flex items-center gap-2">
+              <input type="text" id="manual-lap-input" placeholder="Saisie (ex: 1:42.85)" pattern="^\d{1,2}:\d{2}(\.\d{1,2})?$" required class="flex-1 bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2 text-xs font-mono text-white" />
+              <button type="submit" class="px-3.5 py-2 rounded-xl bg-slate-800 text-xs font-bold text-white">+ Ajouter</button>
+            </form>
+          </div>
+
+          <div class="flex-1 flex flex-col min-h-0">
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-2.5 text-center">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Best Tour</div>
+                <div id="session-best-lap" class="font-mono text-sm font-black text-emerald-400 mt-0.5">--:--.--</div>
+              </div>
+              <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-2.5 text-center">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Moyenne</div>
+                <div id="session-avg-lap" class="font-mono text-sm font-black text-white mt-0.5">--:--.--</div>
+              </div>
+              <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-2.5 text-center">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Régularité</div>
+                <div id="session-consistency" class="font-mono text-sm font-black text-cyan-300 mt-0.5">--%</div>
+              </div>
+            </div>
+            <div id="session-laps-list" class="flex-1 max-h-52 overflow-y-auto space-y-1.5 pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Evolution Comparison Chart -->
+      <section class="bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2"><span>📈</span> Comparatif d'Évolution & Progression</h2>
+            <p class="text-xs text-slate-400">Suivez l'amélioration de vos chronos selon la météo et la terre.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <select id="evo-filter-bike" onchange="renderEvolutionChart()" class="bg-[#0B0E14] border border-mx-border text-xs font-semibold text-slate-200 rounded-xl px-3 py-2"><option value="all">Toutes mes motos</option></select>
+            <select id="evo-filter-weather" onchange="renderEvolutionChart()" class="bg-[#0B0E14] border border-mx-border text-xs font-semibold text-slate-200 rounded-xl px-3 py-2">
+              <option value="all">Toutes météos</option><option value="Ensoleillé">☀️ Ensoleillé</option><option value="Nuageux">⛅ Nuageux</option><option value="Sec / Poussiéreux">💨 Sec</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+            <div class="text-[11px] font-bold uppercase text-slate-400">Record Piste Absolu (PR)</div>
+            <div class="mt-1 flex items-baseline justify-between"><span id="evo-pr-time" class="font-mono text-2xl font-black text-emerald-400">--:--.--</span><span id="evo-pr-meta" class="text-[11px] text-slate-400">--</span></div>
+          </div>
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+            <div class="text-[11px] font-bold uppercase text-slate-400">Delta vs Session Précédente</div>
+            <div class="mt-1 flex items-baseline justify-between"><span id="evo-delta-time" class="font-mono text-2xl font-black text-cyan-300">--</span></div>
+          </div>
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+            <div class="text-[11px] font-bold uppercase text-slate-400">Gain Global Piste</div>
+            <div class="mt-1 flex items-baseline justify-between"><span id="evo-total-gain" class="font-mono text-2xl font-black text-mx-orange">--</span></div>
+          </div>
+        </div>
+
+        <div class="w-full h-64 bg-[#0B0E14] border border-mx-border rounded-2xl p-3 relative">
+          <canvas id="evolution-chart-canvas" class="w-full h-full block"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 3: COACH PHYSIQUE MX (ADULTES & ENFANTS) ==================== -->
+    <div id="view-coach" class="hidden space-y-6">
+      <section class="bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 space-y-5 relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">MX FIT COACH</span>
+              <span id="coach-cycle-badge" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-mx-orange/15 text-mx-orange">Semaine 1 sur 4</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Préparation Physique (Adultes & Enfants)</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Programmes évolutifs d'une semaine à l'autre selon votre objectif (Perte de poids ou Renforcement musculaire) et votre lieu (Salle ou Domicile).</p>
+          </div>
+
+          <div class="flex items-center gap-2 bg-[#0B0E14] p-2 rounded-2xl border border-mx-border">
+            <button onclick="changeCoachWeek(-1)" class="p-2 rounded-xl bg-mx-card hover:bg-mx-cardHover text-slate-300">◀</button>
+            <div class="px-3 text-center"><div class="text-[10px] font-bold text-slate-400 uppercase">Programme Actif</div><div id="coach-week-title" class="font-mono text-sm font-black text-white">Semaine 1</div></div>
+            <button onclick="changeCoachWeek(1)" class="p-2 rounded-xl bg-mx-card hover:bg-mx-cardHover text-slate-300">▶</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-3.5">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">1. Profil Pilote</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setCoachOption('profile', 'adulte')" id="btn-coach-profile-adulte" class="py-2 px-3 rounded-lg text-xs font-bold bg-mx-orange text-white">Adulte</button>
+              <button onclick="setCoachOption('profile', 'enfant')" id="btn-coach-profile-enfant" class="py-2 px-3 rounded-lg text-xs font-bold bg-mx-card text-slate-400">Enfant (7-14)</button>
+            </div>
+          </div>
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-3.5">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">2. Objectif Choisi</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setCoachOption('goal', 'weight_loss')" id="btn-coach-goal-weight_loss" class="py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white">Perte de poids</button>
+              <button onclick="setCoachOption('goal', 'strength')" id="btn-coach-goal-strength" class="py-2 px-2.5 rounded-lg text-xs font-bold bg-mx-card text-slate-400">Renforcement</button>
+            </div>
+          </div>
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-3.5">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">3. Lieu d'Entraînement</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setCoachOption('location', 'home')" id="btn-coach-location-home" class="py-2 px-3 rounded-lg text-xs font-bold bg-mx-blue text-white">À domicile</button>
+              <button onclick="setCoachOption('location', 'gym')" id="btn-coach-location-gym" class="py-2 px-3 rounded-lg text-xs font-bold bg-mx-card text-slate-400">Salle de sport</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div id="coach-phase-name" class="text-sm font-black text-emerald-400">Phase 1 : Fondation Cardio & Gainage Paddock</div>
+            <p id="coach-phase-desc" class="text-xs text-slate-400">Mise en route métabolique pour brûler les graisses et renforcer la sangle abdominale.</p>
+          </div>
+          <div class="sm:w-64 shrink-0 space-y-1.5">
+            <div class="flex justify-between text-xs font-mono"><span class="text-slate-400">Séances validées :</span><span id="coach-week-progress-text" class="font-bold text-emerald-400">0 / 4</span></div>
+            <div class="w-full h-2.5 bg-mx-card rounded-full overflow-hidden border border-mx-border"><div id="coach-week-progress-bar" class="h-full bg-emerald-500 transition-all rounded-full" style="width: 0%"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-black text-white flex items-center gap-2"><span>📅</span> Planning de la Semaine (Cliquez sur chaque exercice pour voir l'exemple)</h2>
+        <div id="coach-weekly-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 4: MENTAL PRO MX ==================== -->
+    <div id="view-mental" class="hidden space-y-6">
+      <section class="bg-mx-card border border-purple-500/30 rounded-2xl p-5 sm:p-6 space-y-5 shadow-lg">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-md text-[11px] font-extrabold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">Mental Pro MX</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Maîtrise de la Grille & Gestion de la Peur</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Protocoles neuro-cognitifs de haut niveau (déconstruction de la peur des sauts, tunnel de focus grille 30s, neutralisation de l'arm-pump).</p>
+          </div>
+          <button onclick="openMentalLogModal()" class="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs sm:text-sm font-bold transition">✍️ Débrief Mental</button>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-black text-white flex items-center gap-2"><span>🧠</span> Protocoles de Haute Performance (Cliquez pour lancer)</h2>
+        <div id="mental-modules-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <section class="bg-mx-card border border-mx-border rounded-2xl p-5 sm:p-6 space-y-4">
+        <h2 class="text-base font-extrabold text-white flex items-center gap-2"><span>📓</span> Journal de Bord du Pilote</h2>
+        <div id="mental-journal-container" class="space-y-2.5"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 5: TUTOS MÉCA ==================== -->
+    <div id="view-tutos" class="hidden space-y-6">
+      <div class="bg-mx-card border border-mx-border rounded-2xl p-6 racing-stripe">
+        <div class="max-w-2xl">
+          <span class="px-2.5 py-1 rounded-md text-xs font-extrabold uppercase bg-mx-orange/20 text-mx-orange">Atelier Mécanique MX</span>
+          <h1 class="text-2xl sm:text-3xl font-black text-white mt-2">Guides & Tutoriels Pas-à-Pas</h1>
+          <p class="text-sm text-slate-400 mt-1">Procédures d'entretien, couples de serrage et checklists pour entretenir votre motocross.</p>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button onclick="filterTutos('all')" class="tuto-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-mx-orange text-white" data-filter="all">Tous</button>
+          <button onclick="filterTutos('Facile')" class="tuto-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300" data-filter="Facile">Facile</button>
+          <button onclick="filterTutos('Intermédiaire')" class="tuto-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300" data-filter="Intermédiaire">Intermédiaire</button>
+          <button onclick="filterTutos('Expert')" class="tuto-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300" data-filter="Expert">Expert Moteur</button>
+        </div>
+      </div>
+      <div id="tutos-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- ==================== TAB 6: HISTORIQUE ==================== -->
+    <div id="view-historique" class="hidden space-y-6">
+      <div class="bg-mx-card border border-mx-border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-black text-white">Carnet d'Entretien Numérique</h1>
+          <p class="text-sm text-slate-400 mt-1">Historique certifié des opérations réalisées.</p>
+        </div>
+        <span id="history-bike-label" class="px-3 py-1.5 rounded-xl bg-[#0E121A] border border-mx-border text-xs font-bold text-mx-orange">Yamaha YZ 65</span>
+      </div>
+      <div id="history-list-container" class="bg-mx-card border border-mx-border rounded-2xl overflow-hidden"></div>
+    </div>
+  </main>
+
+  <footer class="border-t border-mx-border py-5 px-4 text-center text-xs text-slate-500 mt-12">
+    <p>MX RACING MANAGER v2.5 • Prêt pour GitHub & Google Play Store (Capacitor / PWA)</p>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+  <!-- 1. TUTORIAL VIEWER -->
+  <div id="modal-tuto" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+      <div class="p-5 border-b border-mx-border flex items-start justify-between gap-4 bg-[#0E121A]">
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span id="modal-tuto-diff" class="px-2.5 py-0.5 rounded text-xs font-extrabold uppercase bg-emerald-500/15 text-emerald-400">Facile</span>
+            <span id="modal-tuto-time" class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300">⏱ 15 min</span>
+          </div>
+          <h3 id="modal-tuto-title" class="text-xl sm:text-2xl font-black text-white">Titre</h3>
+        </div>
+        <button onclick="closeModal('modal-tuto')" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+            <h4 class="text-xs font-extrabold uppercase text-mx-orange mb-2">🔧 Outils</h4>
+            <ul id="modal-tuto-tools" class="space-y-1.5 text-xs text-slate-300"></ul>
+          </div>
+          <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+            <h4 class="text-xs font-extrabold uppercase text-mx-blueGlow mb-2">🛢️ Consommables</h4>
+            <ul id="modal-tuto-parts" class="space-y-1.5 text-xs text-slate-300"></ul>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-extrabold uppercase text-white">Étapes (Cochez au fur et à mesure)</h4>
+            <span id="modal-tuto-progress" class="text-xs font-mono font-bold text-mx-orange">0/0</span>
+          </div>
+          <div id="modal-tuto-steps" class="space-y-2.5"></div>
+        </div>
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex gap-3">
+          <div class="text-xl">💡</div>
+          <div><h5 class="text-xs font-extrabold uppercase text-amber-400">Conseil de Pro</h5><p id="modal-tuto-tip" class="text-xs sm:text-sm text-amber-100/90 mt-1"></p></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-mx-border bg-[#0E121A] flex justify-between items-center">
+        <button onclick="closeModal('modal-tuto')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Fermer</button>
+        <button id="modal-tuto-validate-btn" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold">✓ Valider l'entretien</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ADD/EDIT BIKE -->
+  <div id="modal-bike" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-mx-border flex items-center justify-between bg-[#0E121A]">
+        <h3 id="modal-bike-title" class="text-lg font-black text-white">Ajouter une Moto (Max 3 version test)</h3>
+        <button onclick="closeModal('modal-bike')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <form id="bike-form" onsubmit="saveBikeForm(event)" class="p-5 space-y-4">
+        <input type="hidden" id="bike-form-id" />
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Modèle *</label>
+          <input type="text" id="bike-form-name" required placeholder="Ex: KTM 125 SX" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Cylindrée</label>
+            <select id="bike-form-cc" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white">
+              <option value="50cc">50cc</option><option value="65cc">65cc</option><option value="85cc">85cc</option><option value="125cc">125cc</option><option value="250cc" selected>250cc</option><option value="450cc">450cc</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Type Moteur</label>
+            <select id="bike-form-engine" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white">
+              <option value="2T">2 Temps (2T)</option><option value="4T">4 Temps (4T)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Année</label><input type="number" id="bike-form-year" value="2026" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Heures actuelles</label><input type="number" id="bike-form-hours" step="0.1" value="0.0" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        </div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Notes / Prépa</label><input type="text" id="bike-form-notes" placeholder="Ex: Ligne FMF" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-bike')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Annuler</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-mx-orange text-white text-xs font-bold">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. ADD MAINTENANCE -->
+  <div id="modal-maint" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-mx-border flex items-center justify-between bg-[#0E121A]"><h3 class="text-lg font-black text-white">Nouvel Entretien</h3><button onclick="closeModal('modal-maint')" class="text-slate-400">✕</button></div>
+      <form onsubmit="saveCustomMaintenance(event)" class="p-5 space-y-4">
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nom *</label><input type="text" id="maint-form-name" required placeholder="Ex: Graissage biellettes" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Intervalle (h)</label><input type="number" id="maint-form-interval" step="0.5" value="15" required class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Fait à (h)</label><input type="number" id="maint-form-last" step="0.1" value="0" required class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        </div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Tutoriel associé</label><select id="maint-form-tuto" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white"></select></div>
+        <div class="pt-2 flex justify-end gap-2"><button type="button" onclick="closeModal('modal-maint')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Annuler</button><button type="submit" class="px-5 py-2 rounded-xl bg-mx-orange text-white text-xs font-bold">Ajouter</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. ADD TRACK -->
+  <div id="modal-track" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-mx-border flex items-center justify-between bg-[#0E121A]"><h3 class="text-lg font-black text-white">Nouveau Circuit</h3><button onclick="closeModal('modal-track')" class="text-slate-400">✕</button></div>
+      <form onsubmit="saveTrackForm(event)" class="p-5 space-y-4">
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nom du Circuit *</label><input type="text" id="track-form-name" required placeholder="Ex: Circuit de Cadenet" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Lieu / Ville *</label><input type="text" id="track-form-location" required placeholder="Ex: Cadenet (84)" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Type de Terre *</label>
+            <select id="track-form-soil" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white">
+              <option value="Terre meuble / Limoneuse">Terre meuble</option><option value="Terre dure / Caillouteuse">Terre dure</option><option value="Sable">Sable</option><option value="Boue / Gras">Boue</option><option value="Mixte">Mixte</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Tracé GPS Type</label>
+            <select id="track-form-layout" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white">
+              <option value="flow">Flow rapide (Sable/Terre)</option><option value="technical">Technique (Supercross/SX)</option><option value="sand">Lignes droites & Whoops</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Météo du jour</label>
+            <select id="track-form-weather" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3 py-2.5 text-sm text-white">
+              <option value="Ensoleillé">☀️ Ensoleillé</option><option value="Nuageux">⛅ Nuageux</option><option value="Sec / Poussiéreux">💨 Sec / Poussiéreux</option><option value="Pluie / Humide">🌧️ Pluie / Humide</option>
+            </select>
+          </div>
+        </div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Réglages moto</label><input type="text" id="track-form-setup" placeholder="Ex: AV 0.9b / AR 0.85b • Détente -2" class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white" /></div>
+        <div class="pt-2 flex justify-end gap-2"><button type="button" onclick="closeModal('modal-track')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Annuler</button><button type="submit" class="px-5 py-2 rounded-xl bg-mx-orange text-white text-xs font-bold">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. EXERCISE EXAMPLE MODAL -->
+  <div id="modal-exercise" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden my-auto">
+      <div class="p-5 border-b border-mx-border flex items-start justify-between gap-4 bg-[#0E121A]">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="ex-modal-badge" class="px-2.5 py-0.5 rounded text-[11px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300">Exemple d'Exécution</span>
+            <span id="ex-modal-target" class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-800 text-slate-300">Gainage</span>
+          </div>
+          <h3 id="ex-modal-title" class="text-xl font-black text-white">Exercice</h3>
+        </div>
+        <button onclick="closeModal('modal-exercise')" class="text-slate-400">✕</button>
+      </div>
+      <div class="p-5 sm:p-6 space-y-5">
+        <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-3.5 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase text-slate-400">Format recommandé :</span>
+          <span id="ex-modal-sets" class="font-mono text-sm font-black text-mx-orange">4 séries × 45s</span>
+        </div>
+        <div class="space-y-2">
+          <h4 class="text-xs font-extrabold uppercase tracking-wider text-cyan-300">📋 Mouvement pas-à-pas & Exemple</h4>
+          <p id="ex-modal-example" class="text-xs sm:text-sm text-slate-200 leading-relaxed bg-[#0B0E14] border border-mx-border rounded-xl p-4"></p>
+        </div>
+        <div class="bg-mx-orange/10 border border-mx-orange/30 rounded-xl p-4 flex gap-3">
+          <div class="text-xl">🏁</div>
+          <div><h5 class="text-xs font-extrabold uppercase text-mx-orange">Bénéfice direct sur la piste MX</h5><p id="ex-modal-mxbenefit" class="text-xs text-orange-100/90 mt-1"></p></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-mx-border bg-[#0E121A] flex justify-end">
+        <button onclick="closeModal('modal-exercise')" class="px-5 py-2 rounded-xl bg-mx-orange text-white text-xs font-bold">Compris</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. MENTAL MODAL -->
+  <div id="modal-mental" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-mx-card border border-purple-500/40 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden my-auto">
+      <div class="p-5 border-b border-mx-border flex items-start justify-between gap-4 bg-[#0E121A]">
+        <div>
+          <h3 id="mental-modal-title" class="text-xl font-black text-white">Protocole</h3>
+        </div>
+        <button onclick="closeModal('modal-mental')" class="text-slate-400">✕</button>
+      </div>
+      <div class="p-5 sm:p-6 space-y-5">
+        <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4">
+          <h4 class="text-xs font-extrabold uppercase text-purple-400 mb-1">🎯 Objectif Neurologique</h4>
+          <p id="mental-modal-objective" class="text-xs sm:text-sm text-slate-200 leading-relaxed"></p>
+        </div>
+        <div id="mental-modal-steps" class="space-y-2 text-xs text-slate-300"></div>
+      </div>
+      <div class="p-4 border-t border-mx-border bg-[#0E121A] flex justify-end">
+        <button onclick="closeModal('modal-mental')" class="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. MENTAL LOG -->
+  <div id="modal-mental-log" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-mx-card border border-mx-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-mx-border flex items-center justify-between bg-[#0E121A]"><h3 class="text-lg font-black text-white">Journal Mental Post-Manche</h3><button onclick="closeModal('modal-mental-log')" class="text-slate-400">✕</button></div>
+      <form onsubmit="saveMentalLog(event)" class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Niveau de Stress / Pression (1 à 10)</label>
+          <input type="range" id="mental-log-stress" min="1" max="10" value="5" oninput="document.getElementById('stress-val').textContent = this.value + '/10'" class="w-full accent-purple-500 cursor-pointer" />
+          <div class="text-right font-mono text-xs font-bold text-purple-400 mt-1" id="stress-val">5/10</div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Notes & Débrief personnel</label>
+          <textarea id="mental-log-notes" rows="3" required placeholder="Ex: Bien parti en manche 1..." class="w-full bg-[#0B0E14] border border-mx-border rounded-xl px-3.5 py-2.5 text-sm text-white"></textarea>
+        </div>
+        <div class="pt-2 flex justify-end gap-2"><button type="button" onclick="closeModal('modal-mental-log')" class="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Annuler</button><button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. PREMIUM PAYWALL MODAL (2€ / mois) -->
+  <div id="modal-premium" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="bg-gradient-to-b from-[#1E1726] to-mx-card border border-amber-500/50 rounded-2xl max-w-md w-full shadow-2xl p-6 text-center space-y-5">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl shadow-lg">👑</div>
+      <div>
+        <h3 class="text-2xl font-black text-white">MX Racing Manager <span class="text-amber-400">PRO</span></h3>
+        <p class="text-xs text-slate-300 mt-1">Débloquez le garage illimité (au-delà de 3 motos), la télémétrie GPS illimitée et l'export des courbes PDF.</p>
+      </div>
+      <div class="bg-[#0B0E14] border border-mx-border rounded-xl p-4 text-left space-y-2">
+        <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">Avantages Abonnés (2,00 € / mois) :</div>
+        <ul class="space-y-1.5 text-xs text-slate-300">
+          <li class="flex items-center gap-2">✓ <span>Garage multi-motos infini (illimité)</span></li>
+          <li class="flex items-center gap-2">✓ <span>Télémétrie GPS 25Hz & Cartographie circuit avancée</span></li>
+          <li class="flex items-center gap-2">✓ <span>Coach Physique & Mental Pro complet</span></li>
+        </ul>
+      </div>
+      <div class="space-y-2">
+        <button onclick="subscribePremium()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black text-sm shadow-lg shadow-amber-500/25 transition">S'abonner pour 2,00 € / mois</button>
+        <button onclick="closeModal('modal-premium')" class="text-xs text-slate-400 hover:text-white underline">Continuer avec la version gratuite (3 motos max)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    const TUTORIALS_DB = {
+      air_filter: { id: 'air_filter', title: 'Nettoyage & Huilage du Filtre à Air', category: 'Admission', difficulty: 'Facile', duration: '15 min', tools: ['Gants nitrile'], parts: ['Nettoyant filtre'], steps: ['Déposer la selle et le filtre.', 'Laver au produit nettoyant puis sécher.', 'Imbiber d’huile spéciale.'], tip: 'Changer après chaque roulage sable.' },
+      oil_2t: { id: 'oil_2t', title: 'Vidange Huile de Boîte 2T', category: 'Transmission', difficulty: 'Facile', duration: '20 min', tools: ['Clé 12mm'], parts: ['Huile 10W40'], steps: ['Chauffer 2 min.', 'Vidanger par le bouchon inférieur.', 'Remplir au niveau.'], tip: 'Serrage modéré.' },
+      oil_4t: { id: 'oil_4t', title: 'Vidange Huile Moteur + Filtre 4T', category: 'Lubrification', difficulty: 'Facile', duration: '30 min', tools: ['Clé 8/10mm'], parts: ['1L Huile 10W50', 'Filtre neuf'], steps: ['Déposer sabot et bouchon.', 'Changer le filtre.', 'Faire le niveau.'], tip: 'Vidanger toutes les 8h.' }
+    };
+
+    const INITIAL_STATE = {
+      activeBikeId: 'bike_yz65',
+      isPremium: false,
+      bikes: [
+        {
+          id: 'bike_yz65', name: 'Yamaha YZ 65', cc: '65cc', engineType: '2T', year: 2026, hours: 18.4,
+          notes: 'Prépa Ligue', maintenances: [
+            { id: 'm1', name: 'Filtre à air', interval: 2.0, lastDoneHours: 16.5, tutoId: 'air_filter' },
+            { id: 'm2', name: 'Vidange boîte', interval: 10.0, lastDoneHours: 10.0, tutoId: 'oil_2t' }
+          ],
+          history: [{ id: 'h1', date: '2026-11-02', hours: 16.5, task: 'Filtre à air' }]
+        }
+      ],
+      tracks: [
+        { id: 't1', name: 'Circuit de Cadenet', location: 'Cadenet (84)', soil: 'Terre meuble', weather: 'Ensoleillé', layout: 'flow', sessions: [] }
+      ]
+    };
+
+    let appState = loadState();
+    let btConnected = false;
+    let liveRideInterval = null;
+    let currentTutoFilter = 'all';
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('mx_racing_manager_state_v25');
+        if (saved) return JSON.parse(saved);
+      } catch(e) {}
+      return JSON.parse(JSON.stringify(INITIAL_STATE));
+    }
+
+    function saveState() {
+      localStorage.setItem('mx_racing_manager_state_v25', JSON.stringify(appState));
+    }
+
+    function getActiveBike() {
+      return appState.bikes.find(b => b.id === appState.activeBikeId) || appState.bikes[0];
+    }
+
+    function showToast(msg, type='info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium bg-[#131B29] border-mx-blue/50 text-white`;
+      toast.innerHTML = `<span>⚡</span><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); document.getElementById(id)?.classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); document.getElementById(id)?.classList.remove('flex'); }
+
+    function switchTab(tabName) {
+      ['garage', 'chrono', 'coach', 'mental', 'tutos', 'historique'].forEach(t => {
+        document.getElementById('view-' + t)?.classList.toggle('hidden', t !== tabName);
+        const btn = document.getElementById('nav-' + t);
+        if (btn) {
+          btn.className = t === tabName ? 'tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-mx-orange text-white shadow' : 'tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white';
+        }
+      });
+      if (tabName === 'chrono') renderChronoTab();
+      if (tabName === 'coach') renderCoachTab();
+      if (tabName === 'mental') renderMentalTab();
+      if (tabName === 'tutos') renderTutosCatalog();
+      if (tabName === 'historique') renderHistoryList();
+    }
+
+    // --- GARAGE & BT ---
+    function selectBike(id) { appState.activeBikeId = id; saveState(); renderAll(); }
+    
+    function renderBikeSelector() {
+      const container = document.getElementById('bike-cards-container');
+      document.getElementById('garage-count').textContent = appState.bikes.length;
+      container.innerHTML = '';
+      appState.bikes.forEach(b => {
+        const isSel = b.id === appState.activeBikeId;
+        const card = document.createElement('div');
+        card.onclick = () => selectBike(b.id);
+        card.className = `cursor-pointer rounded-2xl p-4 border transition flex items-center justify-between ${isSel ? 'bg-gradient-to-r from-[#1A2232] to-mx-card border-mx-orange ring-1 ring-mx-orange/40' : 'bg-mx-card border-mx-border opacity-80'}`;
+        card.innerHTML = `<div><span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${b.engineType==='2T'?'bg-mx-blue/20 text-mx-blueGlow':'bg-purple-500/20 text-purple-300'}">${b.engineType}</span><h3 class="font-extrabold text-white text-base mt-1">${b.name}</h3></div><div class="text-right font-mono text-sm font-black text-mx-orange">${b.hours.toFixed(1)}h</div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function renderActiveBikeDetails() {
+      const bike = getActiveBike();
+      if (!bike) return;
+      document.getElementById('active-bike-name').textContent = bike.name;
+      document.getElementById('active-bike-engine-badge').textContent = bike.engineType === '2T' ? '2 TEMPS' : '4 TEMPS';
+      document.getElementById('active-bike-cc-badge').textContent = bike.cc;
+      document.getElementById('active-bike-hours-big').textContent = bike.hours.toFixed(1);
+      document.getElementById('history-bike-label').textContent = bike.name;
+      document.getElementById('maint-engine-tag').textContent = bike.engineType;
+    }
+
+    function toggleBluetoothConnection() {
+      btConnected = !btConnected;
+      const pill = document.getElementById('bt-status-pill');
+      const text = document.getElementById('btn-bt-connect-text');
+      const sync = document.getElementById('btn-bt-sync');
+      const battery = document.getElementById('bt-battery-box');
+      if (btConnected) {
+        pill.textContent = 'Connecté BLE';
+        pill.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400';
+        text.textContent = 'Déconnecter';
+        sync.disabled = false;
+        battery.classList.remove('hidden'); battery.classList.add('flex');
+        showToast('Compteur Bluetooth synchronisé.', 'success');
+      } else {
+        pill.textContent = 'Déconnecté';
+        pill.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-400';
+        text.textContent = 'Connecter le boîtier Bluetooth';
+        sync.disabled = true;
+        battery.classList.add('hidden');
+      }
+    }
+
+    function syncBluetoothNow() {
+      const bike = getActiveBike();
+      showToast(`Boîtier BLE interrogé : ${bike.hours.toFixed(1)} heures confirmées.`, 'success');
+    }
+
+    function addEngineHours(delta) {
+      const bike = getActiveBike();
+      bike.hours = +(bike.hours + delta).toFixed(1);
+      saveState();
+      renderAll();
+      showToast(`+${delta}h ajoutées au compteur.`, 'info');
+    }
+
+    function toggleLiveRideSimulation() {
+      if (liveRideInterval) {
+        clearInterval(liveRideInterval);
+        liveRideInterval = null;
+        document.getElementById('live-ride-text').textContent = 'Mode Live';
+        showToast('Session de roulage terminée.', 'info');
+      } else {
+        if (!btConnected) toggleBluetoothConnection();
+        liveRideInterval = setInterval(() => {
+          document.getElementById('bt-rpm-readout').textContent = `${Math.floor(7000 + Math.random()*5000)} RPM`;
+          addEngineHours(0.1);
+        }, 2000);
+        document.getElementById('live-ride-text').textContent = 'En Roulage... (Stop)';
+        showToast('Roulage Live activé (+0.1h / 2s).', 'success');
+      }
+    }
+
+    function renderMaintenanceList() {
+      const bike = getActiveBike();
+      const container = document.getElementById('maintenance-list-container');
+      container.innerHTML = '';
+      if (!bike.maintenances || bike.maintenances.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-xs text-slate-500 text-center py-4">Aucun entretien programmé.</div>';
+        return;
+      }
+      bike.maintenances.forEach(m => {
+        const elapsed = +(bike.hours - m.lastDoneHours).toFixed(1);
+        const card = document.createElement('div');
+        card.className = 'bg-mx-card border border-mx-border rounded-2xl p-4 flex items-center justify-between';
+        card.innerHTML = `<div><h3 class="font-extrabold text-white text-sm">${m.name}</h3><span class="text-xs text-slate-400">Intervalle : ${m.interval}h (Usure : ${elapsed}h)</span></div><div class="flex items-center gap-2"><button onclick="openTutorialModal('${m.tutoId || 'air_filter'}')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold">Tuto</button><button onclick="markMaintenanceDone('${m.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">Fait ✓</button></div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function markMaintenanceDone(mId) {
+      const bike = getActiveBike();
+      const m = bike.maintenances.find(x => x.id === mId);
+      if (m) {
+        m.lastDoneHours = bike.hours;
+        bike.history.unshift({ id: 'h_' + Date.now(), date: new Date().toISOString().split('T')[0], hours: bike.hours, task: m.name });
+        saveState();
+        renderAll();
+        showToast(`Entretien "${m.name}" validé !`, 'success');
+      }
+    }
+
+    function openBikeModal() {
+      const bikeCount = appState.bikes.length;
+      if (!appState.isPremium && bikeCount >= 3) {
+        showToast('⚠️ Limite de la version test atteinte (Maximum 3 motos). Passez au Premium (2€/mois) pour un garage illimité !', 'error');
+        openPremiumModal();
+        return;
+      }
+      openModal('modal-bike');
+    }
+
+    function saveBikeForm(e) {
+      e.preventDefault();
+      const bikeCount = appState.bikes.length;
+      if (!appState.isPremium && bikeCount >= 3) {
+        showToast('⚠️ Limite de 3 motos atteinte pour la version test.', 'error');
+        closeModal('modal-bike');
+        openPremiumModal();
+        return;
+      }
+
+      const name = document.getElementById('bike-form-name').value;
+      const cc = document.getElementById('bike-form-cc').value;
+      const engineType = document.getElementById('bike-form-engine').value;
+      appState.bikes.push({ id: 'b_'+Date.now(), name, cc, engineType, year: 2026, hours: 0.0, maintenances: [{ id: 'm1', name: 'Filtre à air', interval: 2.0, lastDoneHours: 0.0, tutoId: 'air_filter' }], history: [] });
+      saveState();
+      closeModal('modal-bike');
+      renderAll();
+      showToast('Nouvelle moto ajoutée au garage.', 'success');
+    }
+
+    function deleteActiveBike() {
+      if (appState.bikes.length <= 1) {
+        showToast('Vous devez garder au moins une moto dans le garage.', 'error');
+        return;
+      }
+      if (confirm('Voulez-vous supprimer cette moto ?')) {
+        appState.bikes = appState.bikes.filter(b => b.id !== appState.activeBikeId);
+        appState.activeBikeId = appState.bikes[0].id;
+        saveState();
+        renderAll();
+        showToast('Moto supprimée.', 'info');
+      }
+    }
+
+    // --- CHRONO & GPS ---
+    function renderChronoTab() {
+      document.getElementById('tracks-count').textContent = appState.tracks.length;
+      const container = document.getElementById('tracks-selector-container');
+      container.innerHTML = appState.tracks.length ? '' : '<div class="col-span-full text-xs text-slate-500 text-center py-4">Aucun circuit enregistré.</div>';
+      appState.tracks.forEach(tr => {
+        const card = document.createElement('div');
+        card.className = 'bg-mx-card border border-mx-border rounded-2xl p-4 cursor-pointer hover:border-cyan-400';
+        card.innerHTML = `<span class="text-[11px] text-cyan-300">📍 ${tr.location}</span><h3 class="font-extrabold text-white text-base">${tr.name}</h3><span class="text-xs text-slate-400">${tr.soil} • ${tr.weather}</span>`;
+        container.appendChild(card);
+      });
+      drawTrackTelemetryCanvas();
+    }
+
+    function openTrackModal() { openModal('modal-track'); }
+    function saveTrackForm(e) {
+      e.preventDefault();
+      const name = document.getElementById('track-form-name').value;
+      const location = document.getElementById('track-form-location').value;
+      const soil = document.getElementById('track-form-soil').value;
+      const weather = document.getElementById('track-form-weather').value;
+      appState.tracks.push({ id: 't_'+Date.now(), name, location, soil, weather, layout: 'flow', sessions: [] });
+      saveState();
+      closeModal('modal-track');
+      renderChronoTab();
+      showToast('Circuit enregistré avec succès.', 'success');
+    }
+
+    function drawTrackTelemetryCanvas() {
+      const canvas = document.getElementById('track-telemetry-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#06B6D4';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(30, 100); ctx.lineTo(150, 40); ctx.lineTo(280, 120); ctx.lineTo(200, 220); ctx.lineTo(50, 180); ctx.closePath();
+      ctx.stroke();
+    }
+
+    function simulateTelemetryBoxLap() {
+      showToast('Boîtier GPS 25Hz : Nouveau tour télémétrique acquis avec succès !', 'success');
+    }
+
+    function onScrubTelemetry(val) {
+      document.getElementById('telemetry-scrubber-pct').textContent = val + '%';
+    }
+
+    let stopwatchInterval = null;
+    let stopwatchTime = 0;
+    let lapCounter = 0;
+
+    function toggleStopwatch() {
+      const btn = document.getElementById('btn-sw-start');
+      if (stopwatchInterval) {
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+        btn.textContent = 'Démarrer';
+        btn.className = 'px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold';
+      } else {
+        stopwatchInterval = setInterval(() => {
+          stopwatchTime += 0.1;
+          const mins = Math.floor(stopwatchTime / 60);
+          const secs = (stopwatchTime % 60).toFixed(2).padStart(5, '0');
+          document.getElementById('stopwatch-display').textContent = `${mins.toString().padStart(2,'0')}:${secs}`;
+        }, 100);
+        btn.textContent = 'Pause';
+        btn.className = 'px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold';
+        document.getElementById('btn-sw-lap').disabled = false;
+      }
+    }
+
+    function recordStopwatchLap() {
+      lapCounter++;
+      const mins = Math.floor(stopwatchTime / 60);
+      const secs = (stopwatchTime % 60).toFixed(2).padStart(5, '0');
+      const timeStr = `${mins}:${secs}`;
+      const list = document.getElementById('session-laps-list');
+      const item = document.createElement('div');
+      item.className = 'flex justify-between items-center bg-[#0B0E14] px-3 py-2 rounded-xl text-xs font-mono';
+      item.innerHTML = `<span class="text-slate-400">Tour ${lapCounter}</span><span class="font-bold text-white">${timeStr}</span>`;
+      list.prepend(item);
+      document.getElementById('session-best-lap').textContent = timeStr;
+      showToast(`Tour ${lapCounter} enregistré : ${timeStr}`, 'info');
+    }
+
+    function resetStopwatch() {
+      if (stopwatchInterval) toggleStopwatch();
+      stopwatchTime = 0;
+      lapCounter = 0;
+      document.getElementById('stopwatch-display').textContent = '00:00.00';
+      document.getElementById('session-laps-list').innerHTML = '';
+      document.getElementById('session-best-lap').textContent = '--:--.--';
+      document.getElementById('btn-sw-lap').disabled = true;
+    }
+
+    function addManualLap(e) {
+      e.preventDefault();
+      const val = document.getElementById('manual-lap-input').value;
+      const list = document.getElementById('session-laps-list');
+      lapCounter++;
+      const item = document.createElement('div');
+      item.className = 'flex justify-between items-center bg-[#0B0E14] px-3 py-2 rounded-xl text-xs font-mono';
+      item.innerHTML = `<span class="text-slate-400">Tour ${lapCounter} (Manuel)</span><span class="font-bold text-white">${val}</span>`;
+      list.prepend(item);
+      document.getElementById('session-best-lap').textContent = val;
+      document.getElementById('manual-lap-input').value = '';
+      showToast('Chrono manuel ajouté.', 'success');
+    }
+
+    function renderEvolutionChart() {}
+
+    // --- COACH MX FIT ---
+    let coachState = { profile: 'adulte', goal: 'weight_loss', location: 'home', week: 1 };
+    
+    function setCoachOption(type, val) {
+      coachState[type] = val;
+      ['adulte', 'enfant'].forEach(p => {
+        const btn = document.getElementById('btn-coach-profile-' + p);
+        if (btn) btn.className = coachState.profile === p ? 'py-2 px-3 rounded-lg text-xs font-bold bg-mx-orange text-white' : 'py-2 px-3 rounded-lg text-xs font-bold bg-mx-card text-slate-400';
+      });
+      ['weight_loss', 'strength'].forEach(g => {
+        const btn = document.getElementById('btn-coach-goal-' + g);
+        if (btn) btn.className = coachState.goal === g ? 'py-2 px-2.5 rounded-lg text-xs font-bold bg-emerald-600 text-white' : 'py-2 px-2.5 rounded-lg text-xs font-bold bg-mx-card text-slate-400';
+      });
+      ['home', 'gym'].forEach(l => {
+        const btn = document.getElementById('btn-coach-location-' + l);
+        if (btn) btn.className = coachState.location === l ? 'py-2 px-3 rounded-lg text-xs font-bold bg-mx-blue text-white' : 'py-2 px-3 rounded-lg text-xs font-bold bg-mx-card text-slate-400';
+      });
+      renderCoachTab();
+    }
+
+    function changeCoachWeek(delta) {
+      coachState.week = Math.max(1, Math.min(4, coachState.week + delta));
+      document.getElementById('coach-week-title').textContent = `Semaine ${coachState.week} / 4`;
+      document.getElementById('coach-cycle-badge').textContent = `Semaine ${coachState.week}`;
+      renderCoachTab();
+    }
+
+    function renderCoachTab() {
+      const grid = document.getElementById('coach-weekly-grid');
+      const isWeight = coachState.goal === 'weight_loss';
+      const isChild = coachState.profile === 'enfant';
+      grid.innerHTML = `
+        <div class="bg-mx-card border border-mx-border rounded-2xl p-4 space-y-2">
+          <div class="flex justify-between items-center"><span class="text-xs font-bold text-emerald-400">Séance 1 • ${isWeight ? 'Cardio & Souffle' : 'Force Basse & Appuis'}</span><span class="text-xs font-mono text-slate-400">Semaine ${coachState.week}</span></div>
+          <h4 class="font-bold text-white text-sm">${isWeight ? 'HIIT Brûle-Graisse & Whoops' : 'Gainage Posture d’Attaque & Squats'}</h4>
+          <p class="text-xs text-slate-400">${isChild ? 'Séance ludique 100% poids de corps adaptée aux juniors.' : 'Programme avancé pour encaisser les G en virage.'}</p>
+          <button onclick="openExerciseModal('${isWeight ? 'HIIT MX' : 'Renforcement'}', '${coachState.week * 3} séries', 'Exécution rigoureuse pour reproduire l’effort en course.')" class="text-xs text-mx-orange font-bold hover:underline">Voir l'exemple →</button>
+        </div>
+      `;
+    }
+
+    function openExerciseModal(title, sets, desc) {
+      document.getElementById('ex-modal-title').textContent = title;
+      document.getElementById('ex-modal-sets').textContent = sets;
+      document.getElementById('ex-modal-example').textContent = desc;
+      document.getElementById('ex-modal-mxbenefit').textContent = 'Prépare le corps aux chocs et évite la fatigue prématurée sur la moto.';
+      openModal('modal-exercise');
+    }
+
+    // --- MENTAL PRO ---
+    function renderMentalTab() {
+      const container = document.getElementById('mental-modules-container');
+      container.innerHTML = `
+        <div class="bg-mx-card border border-mx-border rounded-2xl p-4 space-y-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-500/20 text-purple-300">Grille & Départ</span>
+          <h3 class="font-extrabold text-white text-base">Protocole Grille 30 Secondes</h3>
+          <p class="text-xs text-slate-300">Ancrage visuel et tunnel de focus pour ne pas rater son départ.</p>
+          <button onclick="openMentalModal('Grille 30s', 'Éliminer le stress et automatiser le lâcher d’embrayage.')" class="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold">Lancer →</button>
+        </div>
+      `;
+      document.getElementById('mental-journal-container').innerHTML = `<div class="p-3 text-xs text-slate-400 bg-[#0B0E14] rounded-xl">Aucun débrief récent. Cliquez sur "Débrief Mental" pour enregistrer votre état d'esprit.</div>`;
+    }
+
+    function openMentalModal(title, obj) {
+      document.getElementById('mental-modal-title').textContent = title;
+      document.getElementById('mental-modal-objective').textContent = obj;
+      document.getElementById('mental-modal-steps').innerHTML = `<div class="p-2 bg-[#0B0E14] rounded">1. Fixer la grille<br>2. Double expiration longue<br>3. Concentration totale sur l'embrayage</div>`;
+      openModal('modal-mental');
+    }
+
+    function openMentalLogModal() { openModal('modal-mental-log'); }
+    function saveMentalLog(e) {
+      e.preventDefault();
+      closeModal('modal-mental-log');
+      showToast('Débrief mental enregistré !', 'success');
+    }
+
+    // --- TUTOS & HISTORIQUE ---
+    function renderTutosCatalog() {
+      const container = document.getElementById('tutos-grid-container');
+      container.innerHTML = '';
+      Object.values(TUTORIALS_DB).filter(t => currentTutoFilter === 'all' || t.difficulty === currentTutoFilter).forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'bg-mx-card border border-mx-border rounded-2xl p-5 flex flex-col justify-between gap-4';
+        card.innerHTML = `<div><span class="text-xs text-slate-400">${t.category} • ⏱ ${t.duration}</span><h3 class="font-extrabold text-white text-base mt-1">${t.title}</h3></div><button onclick="openTutorialModal('${t.id}')" class="px-3 py-1.5 rounded-xl bg-mx-orange text-white text-xs font-bold">Ouvrir le guide →</button>`;
+        container.appendChild(card);
+      });
+    }
+
+    function filterTutos(f) {
+      currentTutoFilter = f;
+      renderTutosCatalog();
+    }
+
+    function openTutorialModal(tId) {
+      const t = TUTORIALS_DB[tId] || TUTORIALS_DB['air_filter'];
+      document.getElementById('modal-tuto-title').textContent = t.title;
+      document.getElementById('modal-tuto-diff').textContent = t.difficulty;
+      document.getElementById('modal-tuto-time').textContent = `⏱ ${t.duration}`;
+      document.getElementById('modal-tuto-tip').textContent = t.tip;
+      document.getElementById('modal-tuto-tools').innerHTML = t.tools.map(x => `<li>• ${x}</li>`).join('');
+      document.getElementById('modal-tuto-parts').innerHTML = t.parts.map(x => `<li>• ${x}</li>`).join('');
+      document.getElementById('modal-tuto-steps').innerHTML = t.steps.map((s, i) => `<label class="flex gap-2 text-xs text-slate-200"><input type="checkbox" class="accent-mx-orange"> <b>0${i+1}.</b> ${s}</label>`).join('');
+      openModal('modal-tuto');
+    }
+
+    function renderHistoryList() {
+      const bike = getActiveBike();
+      const container = document.getElementById('history-list-container');
+      container.innerHTML = (bike.history || []).map(h => `<div class="p-4 flex justify-between text-xs border-b border-mx-border"><span class="font-bold text-white">${h.task} (${h.hours}h)</span><span class="text-slate-500">${h.date}</span></div>`).join('') || '<div class="p-4 text-xs text-slate-400">Aucun historique.</div>';
+    }
+
+    function openPremiumModal() { openModal('modal-premium'); }
+    function subscribePremium() {
+      appState.isPremium = true;
+      saveState();
+      closeModal('modal-premium');
+      showToast('Félicitations ! Vous êtes abonné MX Racing Manager PRO (2€/mois).', 'success');
+    }
+
+    function renderAll() {
+      renderBikeSelector();
+      renderActiveBikeDetails();
+      renderMaintenanceList();
+      renderHistoryList();
+    }
+
+    window.onload = () => { renderAll(); };
+  </script>
+</body>
+</html>
