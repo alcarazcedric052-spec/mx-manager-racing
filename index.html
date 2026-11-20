@@ -1244,6 +1244,146 @@
     }
 
     window.onload = () => { renderAll(); };
-  </script>
+  </script><script>
+(function() {
+  const STORAGE_KEY = 'mx_racing_chronos_par_circuit_v1';
+
+  function getChronosStore() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveChronosStore(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function getCurrentTrackKey() {
+    const activeEl = document.querySelector('[data-track-id].active, [data-circuit-id].active, .track-card.selected, .circuit-card.selected');
+    if (activeEl) {
+      return activeEl.getAttribute('data-track-id') || activeEl.getAttribute('data-circuit-id') || activeEl.textContent.trim();
+    }
+    const selectEl = document.querySelector('select[id*="track"], select[id*="circuit"]');
+    if (selectEl && selectEl.value) {
+      return selectEl.value;
+    }
+    const bannerEl = document.querySelector('#active-track-banner, [id*="track-name"], [id*="circuit-name"]');
+    if (bannerEl && bannerEl.textContent.trim()) {
+      return bannerEl.textContent.trim().slice(0, 60);
+    }
+    return 'circuit_par_defaut';
+  }
+
+  function formatMs(ms) {
+    const totalCs = Math.floor(ms / 10);
+    const cs = totalCs % 100;
+    const totalSec = Math.floor(totalCs / 100);
+    const sec = totalSec % 60;
+    const min = Math.floor(totalSec / 60);
+    return `${min}:${String(sec).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+  }
+
+  function parseTimeToMs(str) {
+    const clean = str.trim();
+    const match = clean.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,2}))?$/);
+    if (!match) return null;
+    const min = parseInt(match[1], 10);
+    const sec = parseInt(match[2], 10);
+    const cs = match[3] ? parseInt(match[3].padEnd(2, '0'), 10) : 0;
+    return ((min * 60 + sec) * 100 + cs) * 10;
+  }
+
+  function renderSavedLapsForCurrentTrack() {
+    const listContainer = document.getElementById('session-laps-list');
+    if (!listContainer) return;
+
+    const trackKey = getCurrentTrackKey();
+    const store = getChronosStore();
+    const laps = store[trackKey] || [];
+
+    if (!laps.length) {
+      listContainer.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">Aucun chrono enregistré pour ce circuit.</div>`;
+      const bestEl = document.getElementById('session-best-lap');
+      const avgEl = document.getElementById('session-avg-lap');
+      const consEl = document.getElementById('session-consistency');
+      if (bestEl) bestEl.textContent = '--:--.--';
+      if (avgEl) avgEl.textContent = '--:--.--';
+      if (consEl) consEl.textContent = '--%';
+      return;
+    }
+
+    const times = laps.map(l => l.ms);
+    const bestMs = Math.min(...times);
+    const avgMs = times.reduce((a, b) => a + b, 0) / times.length;
+    const variance = times.reduce((acc, t) => acc + Math.pow(t - avgMs, 2), 0) / times.length;
+    const stdDev = Math.sqrt(variance);
+    const consistency = Math.max(0, Math.min(100, Math.round(100 - (stdDev / avgMs) * 100)));
+
+    const bestEl = document.getElementById('session-best-lap');
+    const avgEl = document.getElementById('session-avg-lap');
+    const consEl = document.getElementById('session-consistency');
+    if (bestEl) bestEl.textContent = formatMs(bestMs);
+    if (avgEl) avgEl.textContent = formatMs(avgMs);
+    if (consEl) consEl.textContent = `${consistency}%`;
+
+    listContainer.innerHTML = laps
+      .map((lap, idx) => {
+        const isBest = lap.ms === bestMs;
+        return `
+          <div class="flex items-center justify-between bg-[#0B0E14] border ${isBest ? 'border-emerald-500/40' : 'border-mx-border'} rounded-xl px-3 py-2 text-xs font-mono">
+            <span class="text-slate-400">Tour #${idx + 1} <span class="text-[10px] text-slate-600">${lap.date || ''}</span></span>
+            <span class="font-bold ${isBest ? 'text-emerald-400' : 'text-white'}">${lap.label}</span>
+          </div>
+        `;
+      })
+      .reverse()
+      .join('');
+  }
+
+  function addLapToCurrentTrack(ms, label) {
+    if (!ms || ms <= 0) return;
+    const trackKey = getCurrentTrackKey();
+    const store = getChronosStore();
+    if (!store[trackKey]) store[trackKey] = [];
+    store[trackKey].push({
+      ms: ms,
+      label: label || formatMs(ms),
+      date: new Date().toLocaleDateString('fr-FR')
+    });
+    saveChronosStore(store);
+    renderSavedLapsForCurrentTrack();
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    renderSavedLapsForCurrentTrack();
+
+    const manualForm = document.querySelector('#view-chrono form');
+    const manualInput = document.getElementById('manual-lap-input');
+    if (manualForm && manualInput) {
+      manualForm.addEventListener('submit', (e) => {
+        const ms = parseTimeToMs(manualInput.value);
+        if (ms) {
+          addLapToCurrentTrack(ms, manualInput.value.trim());
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('button, [data-track-id], [data-circuit-id]');
+      if (!target) return;
+      if (target.id === 'btn-sw-lap') {
+        const disp = document.getElementById('stopwatch-display');
+        const ms = disp ? parseTimeToMs(disp.textContent) : null;
+        if (ms) addLapToCurrentTrack(ms, disp.textContent.trim());
+      }
+      if (target.hasAttribute('data-track-id') || target.hasAttribute('data-circuit-id')) {
+        setTimeout(renderSavedLapsForCurrentTrack, 50);
+      }
+    });
+  });
+})();
+</script>
 </body>
 </html>
